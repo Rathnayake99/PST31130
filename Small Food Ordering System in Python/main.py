@@ -108,6 +108,8 @@ class RestaurantUI(QMainWindow):
         self.pushButton_3.clicked.connect(self.saveItem)
         self.pushButton_7.clicked.connect(self.searchItem)
         self.pushButton_4.clicked.connect(self.removeItem)
+        self.pushButton_5.clicked.connect(self.updateItem)
+        self.pushButton_2.clicked.connect(self.deleteRestaurant)
 
     def createRestaurant(self):
         rName = self.lineEdit.text()
@@ -198,10 +200,49 @@ class RestaurantUI(QMainWindow):
         else:
             print('All fields are required')
 
+    def updateItem(self):
+        
+        rName = self.comboBox.currentText()
+        iName = self.lineEdit_2.text()
+        
+        try:
+            iCode = int(self.lineEdit_4.text())
+            iPrice = int(self.lineEdit_3.text())
+        except ValueError:
+            print("Item code must be an integer.")
+            return
+        if iCode != '' and iName != '' and iPrice != '' and rName != '':
+            cursor.execute('SELECT * FROM items WHERE Code=? AND rName=?', [iCode,rName])
+            item = cursor.fetchone()
+            if item:
+                # Update the item details
+                cursor.execute('UPDATE items SET iName=?,iPrice=? WHERE Code=? AND rName=?', [iName, iPrice, iCode,rName])
+                conn.commit()
+                print("Success", "Item details updated successfully.")
+            else:
+                print("Warning", "Item with code {} not found.".format(iCode))
+        else:
+            print('All fields are required')
+
+    def deleteRestaurant(self):
+        rName = self.comboBox.currentText()
+        if rName != '':
+            try:
+                cursor.execute('DELETE FROM items WHERE rName=?', [rName])
+                cursor.execute('DELETE FROM restaurants WHERE rName=?', [rName])
+                conn.commit()
+                self.load_items()
+                print("Data removed successfully.")
+            except sqlite3.Error as e:
+                print("Error:", e)
+        else:
+            print('Select restaurant name')
+
+
 app = QApplication(sys.argv)
 login_ui = LoginUI()
 signup_ui = SignupUI()
 dashboard_ui = DashboardUI()
 restaurant_ui = RestaurantUI()
-login_ui.show()
+dashboard_ui.show()
 sys.exit(app.exec_())
