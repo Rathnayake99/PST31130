@@ -7,6 +7,7 @@ import bcrypt
 conn = sqlite3.connect('data.db')
 cursor = conn.cursor()
 
+
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS users(
                fullname TEXT NOT NULL,
@@ -19,9 +20,10 @@ cursor.execute('''
 
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS items(
-               code INTEGER PRIMARY KEY,
+               code INTEGER NOT NULL,
                iName TEXT NOT NULL,
-               iPrice TEXT NOT NULL)''')
+               iPrice INTEGER NOT NULL,
+               rName TEXT NOT NULL)''')
 
 class LoginUI(QMainWindow):
     def __init__(self):
@@ -103,6 +105,9 @@ class RestaurantUI(QMainWindow):
         self.load_items()
 
         self.pushButton.clicked.connect(self.createRestaurant)
+        self.pushButton_3.clicked.connect(self.saveItem)
+        self.pushButton_7.clicked.connect(self.searchItem)
+        self.pushButton_4.clicked.connect(self.removeItem)
 
     def createRestaurant(self):
         rName = self.lineEdit.text()
@@ -125,10 +130,73 @@ class RestaurantUI(QMainWindow):
         items = cursor.fetchall()
         for item in items:
             self.comboBox.addItem(item[0])   
-            
 
+    def saveItem(self):
+        iCode = int(self.lineEdit_4.text())
+        iName = self.lineEdit_2.text()
+        iPrice = int(self.lineEdit_3.text())
+        rName = self.comboBox.currentText()
+
+        if iCode != '' and iName != '' and iPrice != '' and rName != '':
+            cursor.execute('SELECT Code FROM items WHERE rName=? AND Code=?',[rName,iCode])
+            if cursor.fetchone() is not None:
+                print("Item coad is already exists.")
+            else:
+                cursor.execute('INSERT INTO items VALUES (?,?,?,?)',[iCode,iName,iPrice,rName])
+                conn.commit()
+                print('success')
+                self.clearItemsFileds()
+                print('success')
+        else:
+            print('All fields are required')
+
+    def clearItemsFileds(self):
+        self.lineEdit_4.setText("")
+        self.lineEdit_2.setText("")
+        self.lineEdit_3.setText("")
+
+
+    def searchItem(self):
+        iCode = self.lineEdit_4.text()
+        rName = self.comboBox.currentText()
+        if iCode != '' and rName != '':
+            try:
+                iCode = int(iCode)
+                cursor.execute('SELECT * FROM items WHERE Code=? AND rName=?', [iCode,rName])
+                item = cursor.fetchone()
+                if item:
+                    self.lineEdit_2.setText(item[1])  # Populate item name
+                    self.lineEdit_3.setText(str(item[2]))
+                    self.comboBox.setCurrentText(item[3])  # Populate item price
+                    # You may need to populate the ComboBox here based on your data model
+                else:
+                    print("Item not found.")
+                    self.clearItemsFileds()
+            except ValueError:
+                print("Item code must be an integer.")
+                self.clearItemsFileds()
+        else:
+            print("Please enter an item code.")
+            self.clearItemsFileds()
        
-
+    def removeItem(self):
+        try:
+            iCode = int(self.lineEdit_4.text())
+            rName = self.comboBox.currentText()
+        except ValueError:
+            print("Item code must be an integer.")
+            return
+        if iCode != '' and rName != '':
+            cursor.execute('SELECT * FROM items WHERE Code=? AND rName=?', [iCode,rName])
+            item = cursor.fetchone()
+            if item:
+                cursor.execute('DELETE FROM items WHERE Code=? AND rName=?', [iCode,rName])
+                conn.commit()
+                print('Item with code {} removed successfully.'.format(iCode))
+            else:
+                print("Item with code {} not found.".format(iCode))
+        else:
+            print('All fields are required')
 
 app = QApplication(sys.argv)
 login_ui = LoginUI()
