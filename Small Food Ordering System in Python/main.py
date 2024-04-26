@@ -25,6 +25,18 @@ cursor.execute('''
                iPrice INTEGER NOT NULL,
                rName TEXT NOT NULL)''')
 
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS orders(
+               name TEXT NOT NULL,
+               rName TEXT NOT NULL,
+               code INTEGER NOT NULL,
+               iName TEXT NOT NULL,
+               iPrice INTEGER NOT NULL,
+               quantity INTEGER NOT NULL,
+               status TEXT NOT NULL)''')
+
+lodedUser = ''
+
 class LoginUI(QMainWindow):
     def __init__(self):
         super(LoginUI, self).__init__()
@@ -39,7 +51,8 @@ class LoginUI(QMainWindow):
         signup_ui.show()
 
     def login(self):
-        username = self.lineEdit.text()
+        global lodedUser
+        lodedUser = username = self.lineEdit.text()
         password = self.lineEdit_2.text()
         if username != '' and password != '':
             cursor.execute('SELECT password FROM users WHERE username=?',[username])
@@ -63,10 +76,15 @@ class DashboardUI(QMainWindow):
         uic.loadUi("dashboard.ui", self)
 
         self.pushButton.clicked.connect(self.restaurant)
+        self.pushButton_2.clicked.connect(self.goToResMesus)
     
     def restaurant(self):
         self.hide()
         restaurant_ui.show()
+
+    def goToResMesus(self):
+        self.hide()
+        restaurant_menus.show()
 
 class SignupUI(QMainWindow):
     def __init__(self):
@@ -238,11 +256,65 @@ class RestaurantUI(QMainWindow):
         else:
             print('Select restaurant name')
 
+class RestaurantMenusUI(QMainWindow):
+    def __init__(self):
+        super(RestaurantMenusUI, self).__init__()
+        uic.loadUi("restaurantsMenus.ui", self)
+        self.loadRestaurants()
+        self.comboBox.currentIndexChanged.connect(self.loadItems)
+
+        self.pushButton_2.clicked.connect(self.backDashboard)
+        self.pushButton.clicked.connect(self.getItem)
+
+    def backDashboard(self):
+        self.hide()
+        dashboard_ui.show()
+
+    def loadRestaurants(self):
+        self.comboBox.clear()
+        cursor.execute("SELECT rName FROM restaurants")
+        items = cursor.fetchall()
+        for item in items:
+            self.comboBox.addItem(item[0])
+        
+    def loadItems(self):
+        rName = self.comboBox.currentText()
+        if rName != '':
+            self.comboBox_2.clear()
+            cursor.execute('SELECT code,iName, iPrice FROM items WHERE rName=?', [rName])
+            items = cursor.fetchall()
+
+            for item in items:
+                code,name, price = item
+                self.comboBox_2.addItem(f"{code} - {name} - ${price}")
+        else:
+            print('Select restaurant name')
+
+    def getItem(self):
+        
+        rName = self.comboBox.currentText()
+        iName = self.comboBox_2.currentText().split(' ')[2]
+        status = "cart"
+        try:
+            code = int(self.comboBox_2.currentText().split(' ')[0])
+            price = int(self.comboBox_2.currentText().split(' ')[4][1:])
+            quantity = int(self.lineEdit_4.text())
+        except ValueError:
+            print("Item code must be an integer.")
+            return
+        if rName != '' and code != '' and quantity != '' and quantity > 0:
+            cursor.execute('INSERT INTO orders VALUES (?,?,?,?,?,?,?)',[lodedUser,rName,code,iName,price,quantity,status])
+            conn.commit()
+            print('item added to the cart')
+        else:
+            print('All fields are required or quantity should be positive')  
+
 
 app = QApplication(sys.argv)
 login_ui = LoginUI()
 signup_ui = SignupUI()
 dashboard_ui = DashboardUI()
 restaurant_ui = RestaurantUI()
-dashboard_ui.show()
+restaurant_menus = RestaurantMenusUI()
+login_ui.show()
 sys.exit(app.exec_())
