@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QApplication, QPushButton
+from PyQt5.QtWidgets import QMainWindow, QApplication, QPushButton,QTableWidgetItem
 from PyQt5 import uic
 import sys
 import sqlite3
@@ -77,6 +77,7 @@ class DashboardUI(QMainWindow):
 
         self.pushButton.clicked.connect(self.restaurant)
         self.pushButton_2.clicked.connect(self.goToResMesus)
+        self.pushButton_3.clicked.connect(self.goToCart)
     
     def restaurant(self):
         self.hide()
@@ -85,6 +86,10 @@ class DashboardUI(QMainWindow):
     def goToResMesus(self):
         self.hide()
         restaurant_menus.show()
+
+    def goToCart(self):
+        self.hide()
+        view_cart.show()
 
 class SignupUI(QMainWindow):
     def __init__(self):
@@ -310,11 +315,69 @@ class RestaurantMenusUI(QMainWindow):
             print('All fields are required or quantity should be positive')  
 
 
+class ViewCart(QMainWindow):
+    def __init__(self):
+        super(ViewCart, self).__init__()
+        uic.loadUi("viewCart.ui", self)
+        self.setWindowTitle("Table Widget Example")
+        
+        self.pushButton_4.clicked.connect(self.loadCart)
+        self.pushButton_3.clicked.connect(self.removeItemsFromCart)
+        self.pushButton_2.clicked.connect(self.backDashboard)
+        self.pushButton.clicked.connect(self.buyItems)
+
+    def backDashboard(self):
+        self.tableWidget.setRowCount(0)
+        self.label.setText("Total = $0")
+        self.hide()
+        dashboard_ui.show()
+
+    def loadCart(self):
+        total = 0
+        print(lodedUser)
+        cursor.execute("SELECT name,rName,iName,iPrice,quantity FROM orders WHERE status='cart'")
+        conn.commit()
+        rows = cursor.fetchall()
+        self.tableWidget.setRowCount(len(rows))
+        column_names = ['Name','Restaurant Name','Item Name','Price','Quantity']
+        self.tableWidget.setColumnCount(len(column_names))
+        self.tableWidget.setHorizontalHeaderLabels(column_names)
+        for i, row in enumerate(rows):
+            for j, value in enumerate(row):
+                item = QTableWidgetItem(str(value))
+                self.tableWidget.setItem(i,j, item)
+                if j == 3:
+                    total+=value
+        self.label.setText("Total = $" + str(total))
+
+    def buyItems(self):
+        try:
+            price = int(self.label.text().split('$')[1])
+        except ValueError:
+            print("Item code must be an integer.")
+            return
+        if price > 0 :
+            cursor.execute("UPDATE orders SET status ='confirmed' WHERE name = ? AND status ='cart'", [lodedUser])
+
+            conn.commit()
+            self.loadCart()
+        else:
+            print('load cart or add item to cart')
+
+        
+    def removeItemsFromCart(self):
+        cursor.execute("DELETE FROM orders WHERE name = ? AND status='cart'", (lodedUser))
+        conn.commit()
+        self.loadCart()
+        
+                
+
 app = QApplication(sys.argv)
 login_ui = LoginUI()
 signup_ui = SignupUI()
 dashboard_ui = DashboardUI()
 restaurant_ui = RestaurantUI()
 restaurant_menus = RestaurantMenusUI()
+view_cart = ViewCart()
 login_ui.show()
 sys.exit(app.exec_())
