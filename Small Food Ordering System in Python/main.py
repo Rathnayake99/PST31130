@@ -78,7 +78,12 @@ class DashboardUI(QMainWindow):
         self.pushButton.clicked.connect(self.restaurant)
         self.pushButton_2.clicked.connect(self.goToResMesus)
         self.pushButton_3.clicked.connect(self.goToCart)
-    
+        self.pushButton_5.clicked.connect(self.goToOders)
+
+    def goToOders(self):
+        self.hide()
+        order_ui.show()
+
     def restaurant(self):
         self.hide()
         restaurant_ui.show()
@@ -133,6 +138,13 @@ class RestaurantUI(QMainWindow):
         self.pushButton_4.clicked.connect(self.removeItem)
         self.pushButton_5.clicked.connect(self.updateItem)
         self.pushButton_2.clicked.connect(self.deleteRestaurant)
+        self.pushButton_8.clicked.connect(self.backDashboard)
+
+    def backDashboard(self):
+        self.lineEdit.setText("")
+        self.clearItemsFileds()
+        self.hide()
+        dashboard_ui.show()
 
     def createRestaurant(self):
         rName = self.lineEdit.text()
@@ -190,10 +202,9 @@ class RestaurantUI(QMainWindow):
                 cursor.execute('SELECT * FROM items WHERE Code=? AND rName=?', [iCode,rName])
                 item = cursor.fetchone()
                 if item:
-                    self.lineEdit_2.setText(item[1])  # Populate item name
+                    self.lineEdit_2.setText(item[1]) 
                     self.lineEdit_3.setText(str(item[2]))
-                    self.comboBox.setCurrentText(item[3])  # Populate item price
-                    # You may need to populate the ComboBox here based on your data model
+                    self.comboBox.setCurrentText(item[3])  
                 else:
                     print("Item not found.")
                     self.clearItemsFileds()
@@ -265,13 +276,16 @@ class RestaurantMenusUI(QMainWindow):
     def __init__(self):
         super(RestaurantMenusUI, self).__init__()
         uic.loadUi("restaurantsMenus.ui", self)
-        self.loadRestaurants()
         self.comboBox.currentIndexChanged.connect(self.loadItems)
 
         self.pushButton_2.clicked.connect(self.backDashboard)
         self.pushButton.clicked.connect(self.getItem)
+        self.pushButton_3.clicked.connect(self.loadRestaurants)
 
     def backDashboard(self):
+        self.comboBox.clear()
+        self.comboBox_2.clear()
+        self.lineEdit_4.setText("")
         self.hide()
         dashboard_ui.show()
 
@@ -281,6 +295,7 @@ class RestaurantMenusUI(QMainWindow):
         items = cursor.fetchall()
         for item in items:
             self.comboBox.addItem(item[0])
+        self.loadItems()
         
     def loadItems(self):
         rName = self.comboBox.currentText()
@@ -334,7 +349,7 @@ class ViewCart(QMainWindow):
 
     def loadCart(self):
         total = 0
-        print(lodedUser)
+        temp = 0
         cursor.execute("SELECT name,rName,iName,iPrice,quantity FROM orders WHERE status='cart'")
         conn.commit()
         rows = cursor.fetchall()
@@ -347,7 +362,11 @@ class ViewCart(QMainWindow):
                 item = QTableWidgetItem(str(value))
                 self.tableWidget.setItem(i,j, item)
                 if j == 3:
-                    total+=value
+                    temp = value
+                if j==4:
+                    total+= temp*value
+                    
+                    
         self.label.setText("Total = $" + str(total))
 
     def buyItems(self):
@@ -370,7 +389,127 @@ class ViewCart(QMainWindow):
         conn.commit()
         self.loadCart()
         
-                
+class Order(QMainWindow):
+    def __init__(self):
+        super(Order, self).__init__()
+        uic.loadUi("order.ui", self)
+
+        self.pushButton_2.clicked.connect(self.backDashboard)
+        self.pushButton_4.clicked.connect(self.loadOrders)
+        self.pushButton_5.clicked.connect(self.goToManageOrders)
+
+    def goToManageOrders(self):
+        self.tableWidget.setRowCount(0)
+        managerPass = self.lineEdit.text()
+        if managerPass != '':
+            if managerPass == 'admin':
+                self.lineEdit.setText("")
+                self.hide()
+                manage_order_ui.show()
+            else:
+                print('Password is worng')
+        else:
+            print('Enter manager password!')
+
+    def backDashboard(self):
+        self.tableWidget.setRowCount(0)
+        self.hide()
+        dashboard_ui.show()
+
+    def loadOrders(self):
+        cursor.execute("SELECT name,rName,iName,iPrice,quantity,status FROM orders WHERE status!='cart' AND name =?",[lodedUser])
+        conn.commit()
+        rows = cursor.fetchall()
+        self.tableWidget.setRowCount(len(rows))
+        column_names = ['Name','Restaurant Name','Item Name','Price','Quantity','Status']
+        self.tableWidget.setColumnCount(len(column_names))
+        self.tableWidget.setHorizontalHeaderLabels(column_names)
+        for i, row in enumerate(rows):
+            for j, value in enumerate(row):
+                item = QTableWidgetItem(str(value))
+                self.tableWidget.setItem(i,j, item)
+
+    
+class ManageOrders(QMainWindow):
+    def __init__(self):
+        super(ManageOrders, self).__init__()
+        uic.loadUi("orderManage.ui", self)
+        
+
+        self.pushButton_2.clicked.connect(self.backDashboard)
+        self.pushButton_4.clicked.connect(self.display)
+        self.pushButton_3.clicked.connect(self.updateStatus)
+
+    def backDashboard(self):
+        self.tableWidget.setRowCount(0)
+        self.comboBox_4.clear()
+        self.comboBox.clear()
+        self.comboBox_2.clear()
+        self.comboBox_3.clear()
+
+        self.hide()
+        order_ui.show()             
+
+    def loadRestaurants(self):
+        self.comboBox.clear()
+        cursor.execute("SELECT DISTINCT rName FROM orders WHERE status!='cart'")
+        items = cursor.fetchall()
+        for item in items:
+            self.comboBox.addItem(item[0])
+
+    def loadUsers(self):
+        self.comboBox_2.clear()
+        cursor.execute("SELECT DISTINCT name FROM orders WHERE status!='cart'")
+        items = cursor.fetchall()
+        for item in items:
+            self.comboBox_2.addItem(item[0])
+    
+    def loadItemId(self):
+        self.comboBox_3.clear()
+        cursor.execute("SELECT DISTINCT code FROM orders WHERE status!='cart'")
+        items = cursor.fetchall()
+        for item in items:
+            self.comboBox_3.addItem(str(item[0]))
+
+
+    def display(self):
+        cursor.execute("SELECT name,rName,code,iName,iPrice,quantity,status FROM orders WHERE status!='cart'")
+        conn.commit()
+        rows = cursor.fetchall()
+        self.tableWidget.setRowCount(len(rows))
+        column_names = ['Name','Restaurant Name','Item Code','Item Name','Price','Quantity','Status']
+        self.tableWidget.setColumnCount(len(column_names))
+        self.tableWidget.setHorizontalHeaderLabels(column_names)
+        for i, row in enumerate(rows):
+            for j, value in enumerate(row):
+                item = QTableWidgetItem(str(value))
+                self.tableWidget.setItem(i,j, item)
+
+        self.loadRestaurants()
+        self.loadUsers()
+        self.loadItemId()
+        self.comboBox_4.setCurrentIndex(-1)
+        self.comboBox.setCurrentIndex(-1)
+        self.comboBox_2.setCurrentIndex(-1)
+        self.comboBox_3.setCurrentIndex(-1)
+
+        
+
+    def updateStatus(self):
+        rName = self.comboBox.currentText()
+        user = self.comboBox_2.currentText()
+        ItemId = self.comboBox_3.currentText()
+        status = self.comboBox_4.currentText()
+
+        if rName != '' and user != '' and ItemId != '' and status != '':
+            iCode = int(ItemId)
+            cursor.execute('UPDATE orders SET status=? WHERE name=? AND rName=? AND code=?', [status, user, rName,iCode])
+            conn.commit()
+            self.display()
+            print("Success", "Item details updated successfully.")
+        else:
+            print('All fields are required')
+
 
 app = QApplication(sys.argv)
 login_ui = LoginUI()
@@ -379,5 +518,7 @@ dashboard_ui = DashboardUI()
 restaurant_ui = RestaurantUI()
 restaurant_menus = RestaurantMenusUI()
 view_cart = ViewCart()
+order_ui = Order()
+manage_order_ui = ManageOrders()
 login_ui.show()
 sys.exit(app.exec_())
