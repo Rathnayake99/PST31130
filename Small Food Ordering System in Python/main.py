@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QApplication, QPushButton,QTableWidgetItem
+from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox,QTableWidgetItem
 from PyQt5 import uic
 import sys
 import sqlite3
@@ -27,6 +27,7 @@ cursor.execute('''
 
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS orders(
+               orderId INTEGER PRIMARY KEY AUTOINCREMENT,
                name TEXT NOT NULL,
                rName TEXT NOT NULL,
                code INTEGER NOT NULL,
@@ -47,6 +48,8 @@ class LoginUI(QMainWindow):
 
 
     def openSignupForm(self):
+        self.lineEdit.setText("")
+        self.lineEdit_2.setText("")
         self.hide()
         signup_ui.show()
 
@@ -59,15 +62,17 @@ class LoginUI(QMainWindow):
             result = cursor.fetchone()
             if result:
                 if bcrypt.checkpw(password.encode('utf-8'),result[0]):
-                    print('logged in successfull')
+                    QMessageBox.information(None, "Information", "logged in successfull")
+                    self.lineEdit.setText("")
+                    self.lineEdit_2.setText("")
                     self.hide()
                     dashboard_ui.show()
                 else:
-                    print('Invalid password')
+                    QMessageBox.information(None, "Information", "Invalid password")
             else:
-                print('Invalid username')
+                QMessageBox.information(None, "Information", "Invalid username")
         else:
-            print('All data required')
+            QMessageBox.information(None, "Information", "All fields are required")
 
 
 class DashboardUI(QMainWindow):
@@ -79,10 +84,15 @@ class DashboardUI(QMainWindow):
         self.pushButton_2.clicked.connect(self.goToResMesus)
         self.pushButton_3.clicked.connect(self.goToCart)
         self.pushButton_5.clicked.connect(self.goToOders)
+        self.pushButton_4.clicked.connect(self.logOut)
 
     def goToOders(self):
         self.hide()
         order_ui.show()
+
+    def logOut(self):
+        self.hide()
+        login_ui.show()
 
     def restaurant(self):
         self.hide()
@@ -102,6 +112,14 @@ class SignupUI(QMainWindow):
         uic.loadUi("signupForm.ui", self)
 
         self.pushButton_2.clicked.connect(self.goBackToLogin)
+        self.pushButton_3.clicked.connect(self.goBackToLogin2)
+
+    def goBackToLogin2(self):
+        self.lineEdit.setText("")
+        self.lineEdit_3.setText("")
+        self.lineEdit_2.setText("")
+        self.hide()
+        login_ui.show()
 
     def goBackToLogin(self):
         username = self.lineEdit.text()
@@ -111,20 +129,20 @@ class SignupUI(QMainWindow):
         if username != '' and password != '' and fullname != '':
             cursor.execute('SELECT username FROM users WHERE username=?',[username])
             if cursor.fetchone() is not None:
-                print("Username already exists.")
+                QMessageBox.information(None, "Information", "Username already exists.")
             else:
                 encodePassword = password.encode('utf-8')
                 hashedPassword = bcrypt.hashpw(encodePassword,bcrypt.gensalt())
                 cursor.execute('INSERT INTO users VALUES (?,?,?)',[fullname,username,hashedPassword])
                 conn.commit()
-                print('success')
+                QMessageBox.information(None, "Information", "Signup successfull")
                 self.lineEdit.setText("")
                 self.lineEdit_3.setText("")
                 self.lineEdit_2.setText("")
                 self.hide()
                 login_ui.show()
         else:
-            print('All fields are required')
+            QMessageBox.information(None, "Information", "All fields are required")
 
 class RestaurantUI(QMainWindow):
     def __init__(self):
@@ -151,11 +169,11 @@ class RestaurantUI(QMainWindow):
         if rName != '':
             cursor.execute('SELECT rName FROM restaurants WHERE rName=?',[rName])
             if cursor.fetchone() is not None:
-                print("Restaurant already exists.")
+                QMessageBox.information(None, "Information", "Restaurant already exists.")
             else:
                 cursor.execute('INSERT INTO restaurants VALUES (?)',[rName])
                 conn.commit()
-                print('success')
+                QMessageBox.information(None, "Information", "Restaurant Added.")
                 self.load_items()
                 
         else:
@@ -177,15 +195,14 @@ class RestaurantUI(QMainWindow):
         if iCode != '' and iName != '' and iPrice != '' and rName != '':
             cursor.execute('SELECT Code FROM items WHERE rName=? AND Code=?',[rName,iCode])
             if cursor.fetchone() is not None:
-                print("Item coad is already exists.")
+                QMessageBox.information(None, "Information", "Item coad is already exists.")
             else:
                 cursor.execute('INSERT INTO items VALUES (?,?,?,?)',[iCode,iName,iPrice,rName])
                 conn.commit()
-                print('success')
+                QMessageBox.information(None, "Information", "Item is added.")
                 self.clearItemsFileds()
-                print('success')
         else:
-            print('All fields are required')
+            QMessageBox.information(None, "Information", "All fields are required")
 
     def clearItemsFileds(self):
         self.lineEdit_4.setText("")
@@ -206,13 +223,13 @@ class RestaurantUI(QMainWindow):
                     self.lineEdit_3.setText(str(item[2]))
                     self.comboBox.setCurrentText(item[3])  
                 else:
-                    print("Item not found.")
+                    QMessageBox.information(None, "Information", "Item is not found.")
                     self.clearItemsFileds()
             except ValueError:
-                print("Item code must be an integer.")
+                QMessageBox.information(None, "Information", "Item code must be an integer.")
                 self.clearItemsFileds()
         else:
-            print("Please enter an item code.")
+            QMessageBox.information(None, "Information", "Please enter an item code.")
             self.clearItemsFileds()
        
     def removeItem(self):
@@ -220,19 +237,20 @@ class RestaurantUI(QMainWindow):
             iCode = int(self.lineEdit_4.text())
             rName = self.comboBox.currentText()
         except ValueError:
-            print("Item code must be an integer.")
+            QMessageBox.information(None, "Information", "Item code must be an integer.")
             return
         if iCode != '' and rName != '':
             cursor.execute('SELECT * FROM items WHERE Code=? AND rName=?', [iCode,rName])
             item = cursor.fetchone()
-            if item:
+            if item and QMessageBox.question(None, "Question", "Do you want to delete item?", QMessageBox.Ok | QMessageBox.Cancel) == QMessageBox.Ok:
                 cursor.execute('DELETE FROM items WHERE Code=? AND rName=?', [iCode,rName])
                 conn.commit()
-                print('Item with code {} removed successfully.'.format(iCode))
+                self.clearItemsFileds()
+                QMessageBox.information(None, "Information", "Item with code {} removed successfully.".format(iCode))
             else:
-                print("Item with code {} not found.".format(iCode))
+                self.clearItemsFileds()
         else:
-            print('All fields are required')
+            QMessageBox.information(None, "Information", "All fields are required")
 
     def updateItem(self):
         
@@ -243,34 +261,36 @@ class RestaurantUI(QMainWindow):
             iCode = int(self.lineEdit_4.text())
             iPrice = int(self.lineEdit_3.text())
         except ValueError:
-            print("Item code must be an integer.")
+            QMessageBox.information(None, "Information", "Item code must be an integer.")
             return
         if iCode != '' and iName != '' and iPrice != '' and rName != '':
             cursor.execute('SELECT * FROM items WHERE Code=? AND rName=?', [iCode,rName])
             item = cursor.fetchone()
             if item:
-                # Update the item details
                 cursor.execute('UPDATE items SET iName=?,iPrice=? WHERE Code=? AND rName=?', [iName, iPrice, iCode,rName])
                 conn.commit()
-                print("Success", "Item details updated successfully.")
+                self.clearItemsFileds()
+                QMessageBox.information(None, "Information", "Item details updated successfully.")
+
             else:
-                print("Warning", "Item with code {} not found.".format(iCode))
+                QMessageBox.warning(None, "Warning", "Item with code {} not found.".format(iCode))
         else:
-            print('All fields are required')
+            QMessageBox.information(None, "Information", "All fields are required")
 
     def deleteRestaurant(self):
         rName = self.comboBox.currentText()
         if rName != '':
-            try:
-                cursor.execute('DELETE FROM items WHERE rName=?', [rName])
-                cursor.execute('DELETE FROM restaurants WHERE rName=?', [rName])
-                conn.commit()
-                self.load_items()
-                print("Data removed successfully.")
-            except sqlite3.Error as e:
-                print("Error:", e)
+            if QMessageBox.question(None, "Question", "Do you want to delete restaurant?", QMessageBox.Ok | QMessageBox.Cancel) == QMessageBox.Ok:
+                try:
+                    cursor.execute('DELETE FROM items WHERE rName=?', [rName])
+                    cursor.execute('DELETE FROM restaurants WHERE rName=?', [rName])
+                    conn.commit()
+                    self.load_items()
+                    QMessageBox.information(None, "Information", "Restaurant removed successfully.")
+                except sqlite3.Error as e:
+                    QMessageBox.information(None, "Information", "Error:", e)
         else:
-            print('Select restaurant name')
+            QMessageBox.information(None, "Information", "Select restaurant name")
 
 class RestaurantMenusUI(QMainWindow):
     def __init__(self):
@@ -308,7 +328,7 @@ class RestaurantMenusUI(QMainWindow):
                 code,name, price = item
                 self.comboBox_2.addItem(f"{code} - {name} - ${price}")
         else:
-            print('Select restaurant name')
+            QMessageBox.information(None, "Information", "Select restaurant name")
 
     def getItem(self):
         
@@ -320,14 +340,14 @@ class RestaurantMenusUI(QMainWindow):
             price = int(self.comboBox_2.currentText().split(' ')[4][1:])
             quantity = int(self.lineEdit_4.text())
         except ValueError:
-            print("Item code must be an integer.")
+            QMessageBox.information(None, "Information", "Item code must be an integer.")
             return
         if rName != '' and code != '' and quantity != '' and quantity > 0:
-            cursor.execute('INSERT INTO orders VALUES (?,?,?,?,?,?,?)',[lodedUser,rName,code,iName,price,quantity,status])
+            cursor.execute('INSERT INTO orders (name,rName,code,iName,iPrice,quantity,status) VALUES (?,?,?,?,?,?,?)',[lodedUser,rName,code,iName,price,quantity,status])
             conn.commit()
-            print('item added to the cart')
+            QMessageBox.information(None, "Information", "item added to the cart")
         else:
-            print('All fields are required or quantity should be positive')  
+            QMessageBox.information(None, "Information", "All fields are required or quantity should be positive")  
 
 
 class ViewCart(QMainWindow):
@@ -377,17 +397,25 @@ class ViewCart(QMainWindow):
             return
         if price > 0 :
             cursor.execute("UPDATE orders SET status ='confirmed' WHERE name = ? AND status ='cart'", [lodedUser])
-
+            QMessageBox.information(None, "Information", "Item is bought")
             conn.commit()
             self.loadCart()
         else:
-            print('load cart or add item to cart')
+            QMessageBox.information(None, "Information", "load cart or add item to cart")
 
         
     def removeItemsFromCart(self):
-        cursor.execute("DELETE FROM orders WHERE name = ? AND status='cart'", (lodedUser))
-        conn.commit()
-        self.loadCart()
+        
+        if QMessageBox.question(None, "Question", "Do you want to remove items from cart?", QMessageBox.Ok | QMessageBox.Cancel) == QMessageBox.Ok:
+            cursor.execute("SELECT * FROM orders WHERE name=? AND status='cart'",[lodedUser])
+            result = cursor.fetchall()
+            if result:
+                cursor.execute("DELETE FROM orders WHERE name = ? AND status='cart'", (lodedUser))
+                conn.commit()
+                self.loadCart()
+            else:
+                QMessageBox.information(None, "Information", "Cart is empty")
+            
         
 class Order(QMainWindow):
     def __init__(self):
@@ -398,18 +426,18 @@ class Order(QMainWindow):
         self.pushButton_4.clicked.connect(self.loadOrders)
         self.pushButton_5.clicked.connect(self.goToManageOrders)
 
-    def goToManageOrders(self):
-        self.tableWidget.setRowCount(0)
+    def goToManageOrders(self):  
         managerPass = self.lineEdit.text()
         if managerPass != '':
             if managerPass == 'admin':
+                self.tableWidget.setRowCount(0)
                 self.lineEdit.setText("")
                 self.hide()
                 manage_order_ui.show()
             else:
-                print('Password is worng')
+                QMessageBox.information(None, "Information", "Password is worng")
         else:
-            print('Enter manager password!')
+            QMessageBox.information(None, "Information", "Enter manager password!")
 
     def backDashboard(self):
         self.tableWidget.setRowCount(0)
@@ -434,7 +462,6 @@ class ManageOrders(QMainWindow):
     def __init__(self):
         super(ManageOrders, self).__init__()
         uic.loadUi("orderManage.ui", self)
-        
 
         self.pushButton_2.clicked.connect(self.backDashboard)
         self.pushButton_4.clicked.connect(self.display)
@@ -443,41 +470,16 @@ class ManageOrders(QMainWindow):
     def backDashboard(self):
         self.tableWidget.setRowCount(0)
         self.comboBox_4.clear()
-        self.comboBox.clear()
-        self.comboBox_2.clear()
-        self.comboBox_3.clear()
-
+        self.lineEdit.setText("")
         self.hide()
         order_ui.show()             
 
-    def loadRestaurants(self):
-        self.comboBox.clear()
-        cursor.execute("SELECT DISTINCT rName FROM orders WHERE status!='cart'")
-        items = cursor.fetchall()
-        for item in items:
-            self.comboBox.addItem(item[0])
-
-    def loadUsers(self):
-        self.comboBox_2.clear()
-        cursor.execute("SELECT DISTINCT name FROM orders WHERE status!='cart'")
-        items = cursor.fetchall()
-        for item in items:
-            self.comboBox_2.addItem(item[0])
-    
-    def loadItemId(self):
-        self.comboBox_3.clear()
-        cursor.execute("SELECT DISTINCT code FROM orders WHERE status!='cart'")
-        items = cursor.fetchall()
-        for item in items:
-            self.comboBox_3.addItem(str(item[0]))
-
-
     def display(self):
-        cursor.execute("SELECT name,rName,code,iName,iPrice,quantity,status FROM orders WHERE status!='cart'")
+        cursor.execute("SELECT orderId,name,rName,code,iName,iPrice,quantity,status FROM orders WHERE status!='cart'")
         conn.commit()
         rows = cursor.fetchall()
         self.tableWidget.setRowCount(len(rows))
-        column_names = ['Name','Restaurant Name','Item Code','Item Name','Price','Quantity','Status']
+        column_names = ['Order ID','Name','Restaurant Name','Item Code','Item Name','Price','Quantity','Status']
         self.tableWidget.setColumnCount(len(column_names))
         self.tableWidget.setHorizontalHeaderLabels(column_names)
         for i, row in enumerate(rows):
@@ -485,30 +487,33 @@ class ManageOrders(QMainWindow):
                 item = QTableWidgetItem(str(value))
                 self.tableWidget.setItem(i,j, item)
 
-        self.loadRestaurants()
-        self.loadUsers()
-        self.loadItemId()
         self.comboBox_4.setCurrentIndex(-1)
-        self.comboBox.setCurrentIndex(-1)
-        self.comboBox_2.setCurrentIndex(-1)
-        self.comboBox_3.setCurrentIndex(-1)
+        self.lineEdit.setText("")
 
-        
 
     def updateStatus(self):
-        rName = self.comboBox.currentText()
-        user = self.comboBox_2.currentText()
-        ItemId = self.comboBox_3.currentText()
+
+        orderId = self.lineEdit.text()
         status = self.comboBox_4.currentText()
 
-        if rName != '' and user != '' and ItemId != '' and status != '':
-            iCode = int(ItemId)
-            cursor.execute('UPDATE orders SET status=? WHERE name=? AND rName=? AND code=?', [status, user, rName,iCode])
-            conn.commit()
-            self.display()
-            print("Success", "Item details updated successfully.")
+        if orderId != '' and status != '':
+            try:
+                id = int(orderId)
+                cursor.execute("SELECT orderId FROM orders WHERE orderId=?",[id])
+                result = cursor.fetchone()
+                if result:
+                    cursor.execute('UPDATE orders SET status=? WHERE orderId=?', [status, id])
+                    conn.commit()
+                    self.display()
+                    QMessageBox.information(None, "Information", "Order details updated successfully.")
+                else:
+                    QMessageBox.information(None, "Information", "Item is not found")    
+            except ValueError:
+                QMessageBox.information(None, "Information", "Item code must be an integer.")
+            
+            
         else:
-            print('All fields are required')
+            QMessageBox.information(None, "Information", "All fields are required")
 
 
 app = QApplication(sys.argv)
