@@ -331,13 +331,12 @@ class RestaurantMenusUI(QMainWindow):
             QMessageBox.information(None, "Information", "Select restaurant name")
 
     def getItem(self):
-        
         rName = self.comboBox.currentText()
         iName = self.comboBox_2.currentText().split(' ')[2]
         status = "cart"
         try:
             code = int(self.comboBox_2.currentText().split(' ')[0])
-            price = int(self.comboBox_2.currentText().split(' ')[4][1:])
+            price = int(self.comboBox_2.currentText().split('$')[1])
             quantity = int(self.lineEdit_4.text())
         except ValueError:
             QMessageBox.information(None, "Information", "Item code must be an integer.")
