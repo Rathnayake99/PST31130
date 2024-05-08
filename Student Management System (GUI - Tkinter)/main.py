@@ -159,7 +159,7 @@ class Dashboard(Toplevel):
         self.master = master
 
         self.title('Dashboard')
-        self.geometry('1250x750')
+        self.geometry('1250x650')
         self.left_frame = LabelFrame(self, text="Student Records", width=400, height=550)
         self.left_frame.place(x=30, y=60)
 
@@ -201,16 +201,16 @@ class Dashboard(Toplevel):
         self.add_button = Button(self.left_frame, text="Add", width=10,font=('Microsoft YaHei UI Light',15,'bold'),command=self.addStudent)
         self.add_button.grid(row=8, column=0, padx=5, pady=5)
 
-        self.update_button = Button(self.left_frame, text="Update", width=10,font=('Microsoft YaHei UI Light',15,'bold'))
+        self.update_button = Button(self.left_frame, text="Update", width=10,font=('Microsoft YaHei UI Light',15,'bold'),command=self.updateStudent)
         self.update_button.grid(row=8, column=1, padx=5, pady=5)
 
-        self.delete_button = Button(self.left_frame, text="Delete", width=10,font=('Microsoft YaHei UI Light',15,'bold'))
+        self.delete_button = Button(self.left_frame, text="Delete", width=10,font=('Microsoft YaHei UI Light',15,'bold'),command=self.deleteStudent)
         self.delete_button.grid(row=9, column=0, padx=5, pady=5)
 
         self.clear_button = Button(self.left_frame, text="Clear", width=10,font=('Microsoft YaHei UI Light',15,'bold'))
         self.clear_button.grid(row=9, column=1, padx=5, pady=5)
 
-        self.search_button = Button(self.left_frame, text="Search", width=10,font=('Microsoft YaHei UI Light',15,'bold'))
+        self.search_button = Button(self.left_frame, text="Search", width=10,font=('Microsoft YaHei UI Light',15,'bold'),command=self.searchById)
         self.search_button.grid(row=10, column=0, padx=5, pady=5)
 
         self.display_button = Button(self.left_frame, text="Display", width=10,font=('Microsoft YaHei UI Light',15,'bold'),command=self.display)
@@ -289,12 +289,96 @@ class Dashboard(Toplevel):
             for i, row in enumerate(rows, start=1):
                 tags = ("evenrow",) if i % 2 == 0 else ("oddrow",)
                 self.student_tree.insert("", "end", values=row, tags=tags)
-
-            # for row in rows:
-            #     self.student_tree.insert('', 'end', values=row)
-            # con.commit()
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {str(e)}")
+
+    def updateStudent(self):
+        id = self.id_entry.get()
+        name = self.name_entry.get()
+        gender = self.gender_combobox.get()
+        age = self.age_entry.get()
+        eDate = self.enroll_date_entry.get()
+        mid = self.midterm_entry.get()
+        end = self.final_entry.get()
+        gpa = self.gpa_entry.get()
+
+        if id != '' and name != '' and gender != '' and age != '' and eDate != '' and mid != '' and end != '' and gpa != '':
+            try:
+                checkedId = int(id)
+                checkedAge = int(age)
+                checkedMid = int(mid)
+                checkedEnd = int(end)
+                checkedGPA = float(gpa)
+
+                cursor.execute('SELECT id FROM students WHERE id=?', [checkedId])
+                result = cursor.fetchall()
+                if result:
+                    cursor.execute('UPDATE students SET name=?, gender=?, age=?, date=?, mid=?, end=?, gpa=? WHERE id=?',
+                                   (name, gender, checkedAge, eDate, checkedMid, checkedEnd, checkedGPA, checkedId))
+                    con.commit()
+                    messagebox.showinfo('Success', 'Student information updated successfully')
+                else:
+                    messagebox.showerror('Error', 'Student with this ID does not exist.')
+
+            except ValueError:
+                messagebox.showerror("Error", "Please enter valid integer or float values")
+        else:
+            messagebox.showerror('Error', 'All fields are required!')
+
+    def deleteStudent(self):
+        id = self.id_entry.get()
+
+        if id != '':
+            try:
+                checkedId = int(id)
+
+                cursor.execute('SELECT id FROM students WHERE id=?', [checkedId])
+                result = cursor.fetchall()
+
+                if result:
+                    confirmation = messagebox.askyesno("Confirmation", "Are you sure you want to delete this student?")
+
+                    if confirmation:
+                        cursor.execute('DELETE FROM students WHERE id=?', [checkedId])
+                        con.commit()
+                        messagebox.showinfo('Success', 'Student deleted successfully')
+
+                else:
+                    messagebox.showerror('Error', 'Student with this ID does not exist.')
+
+            except ValueError:
+                messagebox.showerror("Error", "Please enter a valid integer ID")
+
+        else:
+            messagebox.showerror('Error', 'Please enter the ID of the student to be deleted')
+
+    def searchById(self):
+        id = self.id_entry.get()
+        if id != '':
+            try:
+                checkedId = int(id)
+                
+
+                cursor.execute('SELECT id FROM students WHERE id=?', [checkedId])
+                result = cursor.fetchall()
+
+                if result:
+                    self.student_tree.delete(*self.student_tree.get_children())
+                    cursor.execute('SELECT * FROM students WHERE id=?', [checkedId])
+                    rows = cursor.fetchall()
+
+                    for i, row in enumerate(rows, start=1):
+                        tags = ("evenrow",) if i % 2 == 0 else ("oddrow",)
+                        self.student_tree.insert("", "end", values=row, tags=tags)
+
+                else:
+                    messagebox.showerror('Error', 'Student with this ID does not exist.')
+
+            except ValueError:
+                messagebox.showerror("Error", "Please enter a valid integer ID")
+
+        else:
+            messagebox.showerror('Error', 'Please enter the ID of the student to be search')
 
 
 app = LoginPage()
