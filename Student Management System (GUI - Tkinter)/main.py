@@ -207,7 +207,7 @@ class Dashboard(Toplevel):
         self.delete_button = Button(self.left_frame, text="Delete", width=10,font=('Microsoft YaHei UI Light',15,'bold'),command=self.deleteStudent)
         self.delete_button.grid(row=9, column=0, padx=5, pady=5)
 
-        self.clear_button = Button(self.left_frame, text="Clear", width=10,font=('Microsoft YaHei UI Light',15,'bold'))
+        self.clear_button = Button(self.left_frame, text="Clear", width=10,font=('Microsoft YaHei UI Light',15,'bold'),command=self.cleatData)
         self.clear_button.grid(row=9, column=1, padx=5, pady=5)
 
         self.search_button = Button(self.left_frame, text="Search", width=10,font=('Microsoft YaHei UI Light',15,'bold'),command=self.searchById)
@@ -245,6 +245,8 @@ class Dashboard(Toplevel):
         self.student_tree.tag_configure("oddrow", background="#4CCD99")
         
         self.student_tree.place(x=450, y=67)
+
+        self.student_tree.bind('<<TreeviewSelect>>', self.fill_fields)
 
     def addStudent(self):
         id = self.id_entry.get()
@@ -380,6 +382,36 @@ class Dashboard(Toplevel):
         else:
             messagebox.showerror('Error', 'Please enter the ID of the student to be search')
 
+    def cleatData(self):
+        self.student_tree.delete(*self.student_tree.get_children())
+        self.id_entry.delete(0,'end')
+        self.name_entry.delete(0,'end')
+        self.gender_combobox.set('')
+        self.age_entry.delete(0,'end')
+        self.enroll_date_entry.delete(0,'end')
+        self.midterm_entry.delete(0,'end')
+        self.final_entry.delete(0,'end')
+        self.gpa_entry.delete(0,'end')
+
+    def fillFields(self, event):
+        selected_item = self.student_tree.focus()
+        values = self.student_tree.item(selected_item, 'values') 
+        if values:
+            self.id_entry.delete(0, 'end')
+            self.id_entry.insert(0, values[0])  
+            self.name_entry.delete(0, 'end')
+            self.name_entry.insert(0, values[1]) 
+            self.gender_combobox.set(values[2]) 
+            self.age_entry.delete(0, 'end')
+            self.age_entry.insert(0, values[3]) 
+            self.enroll_date_entry.delete(0, 'end')
+            self.enroll_date_entry.insert(0, values[4]) 
+            self.midterm_entry.delete(0, 'end')
+            self.midterm_entry.insert(0, values[5])
+            self.final_entry.delete(0, 'end')
+            self.final_entry.insert(0, values[6])
+            self.gpa_entry.delete(0, 'end')
+            self.gpa_entry.insert(0, values[7])  
 
 app = LoginPage()
 app.mainloop()
