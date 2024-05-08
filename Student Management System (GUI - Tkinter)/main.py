@@ -198,7 +198,7 @@ class Dashboard(Toplevel):
         self.gpa_entry.grid(row=7, column=1, padx=5, pady=5, sticky='w')
 
         # Buttons
-        self.add_button = Button(self.left_frame, text="Add", width=10,font=('Microsoft YaHei UI Light',15,'bold'))
+        self.add_button = Button(self.left_frame, text="Add", width=10,font=('Microsoft YaHei UI Light',15,'bold'),command=self.addStudent)
         self.add_button.grid(row=8, column=0, padx=5, pady=5)
 
         self.update_button = Button(self.left_frame, text="Update", width=10,font=('Microsoft YaHei UI Light',15,'bold'))
@@ -213,7 +213,7 @@ class Dashboard(Toplevel):
         self.search_button = Button(self.left_frame, text="Search", width=10,font=('Microsoft YaHei UI Light',15,'bold'))
         self.search_button.grid(row=10, column=0, padx=5, pady=5)
 
-        self.display_button = Button(self.left_frame, text="Display", width=10,font=('Microsoft YaHei UI Light',15,'bold'))
+        self.display_button = Button(self.left_frame, text="Display", width=10,font=('Microsoft YaHei UI Light',15,'bold'),command=self.display)
         self.display_button.grid(row=10, column=1, padx=5, pady=5)
 
 
@@ -240,11 +240,61 @@ class Dashboard(Toplevel):
         self.student_tree.column("Midterm", width=100, stretch=False)
         self.student_tree.column("Final", width=100, stretch=False)
         self.student_tree.column("GPA", width=50, stretch=False)
+
+        self.student_tree.tag_configure("evenrow", background="#f0f0f0")
+        self.student_tree.tag_configure("oddrow", background="#4CCD99")
         
         self.student_tree.place(x=450, y=67)
 
+    def addStudent(self):
+        id = self.id_entry.get()
+        name = self.name_entry.get()
+        gender = self.gender_combobox.get()
+        age = self.age_entry.get()
+        eDate = self.enroll_date_entry.get()
+        mid = self.midterm_entry.get()
+        end = self.final_entry.get()
+        gpa = self.gpa_entry.get()
 
+        if id != '' and name != '' and gender != '' and age != '' and eDate != '' and mid != '' and end != '' and gpa != '':
+            try:
+                checkedId = int(id)
+                checkedAge = int(age)
+                checkedMid = int(mid)
+                checkedEnd = int(end)
+                checkedGPA = float(gpa)
 
+                cursor.execute('SELECT id FROM students where id=?',[checkedId])
+                result = cursor.fetchall()
+                if not result:
+                    cursor.execute('INSERT INTO students VALUES (?,?,?,?,?,?,?,?)',[checkedId,name,gender,checkedAge,eDate,checkedMid,checkedEnd,checkedGPA])
+                    con.commit()
+                    messagebox.showinfo('Message','Student added successfull')
+                else:
+                    messagebox.showerror('Error','This id is already exists.')
+
+            except ValueError:
+                messagebox.showerror("Error", "Integer or float type error")
+
+        else:
+            messagebox.showerror('Error','All fields are required!')
+
+    def display(self):
+        
+        try:
+            self.student_tree.delete(*self.student_tree.get_children())
+            cursor.execute('SELECT * FROM students')
+            rows = cursor.fetchall()
+
+            for i, row in enumerate(rows, start=1):
+                tags = ("evenrow",) if i % 2 == 0 else ("oddrow",)
+                self.student_tree.insert("", "end", values=row, tags=tags)
+
+            # for row in rows:
+            #     self.student_tree.insert('', 'end', values=row)
+            # con.commit()
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {str(e)}")
 
 
 app = LoginPage()
